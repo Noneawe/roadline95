@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>ROADLINE '95 render tests</title>
+<style>
+  body { background: #111; color: #ddd; font: 13px monospace; margin: 16px; }
+  td { padding: 2px 10px; }
+  .pass { color: #6f6; } .fail { color: #f66; }
+  figure { display: inline-block; margin: 6px; }
+  canvas { width: 320px; height: 240px; image-rendering: pixelated; border: 1px solid #333; }
+  #dump { display: none; }
+</style>
+</head>
+<body>
+<h1>Render tests (index buffer vs tools/golden)</h1>
+<p>Tolerance: at most 1% differing pixels and 1% histogram difference; no index 0 in the world area (shown magenta).
+<code>?dump=1</code> prints buffers for <code>node tools/render-test.mjs --update</code>.</p>
+<table id="results"></table>
+<div id="shots"></div>
+<pre id="dump"></pre>
+<script type="module">
+import { CONFIG } from '../src/config.js';
+import { createContext } from '../src/gfx/gl.js';
+import { buildPalette, nearestIndex } from '../src/gfx/palette.js';
+import { getColormap } from '../src/gfx/colormap.js';
+import { assignLayers, buildLayerData } from '../src/gfx/textures.js';
+import { Renderer } from '../src/gfx/renderer.js';
+import { generateLibrary } from '../src/texgen/library.js';
+import { createRenderScene } from '../src/state/renderTest.js';
+import { createTrackScene } from '../src/state/trackTest.js';
+import { createDriveScene, createRaceScene } from '../src/state/race.js';
+import { createEnv } from '../src/state/env.js';
+import { generateSky } from '../src/texgen/sky.js';
+import { TRACKS } from '../src/data/tracks/index.js';
+import { TRACK_TEST_LOOP } from '../src/data/tracks/testLoop.js';
+import { frameAt } from '../src/world/track.js';
+import { weatherConditions } from '../src/game/weather.js';
+
+const W = 320, H = 240, TOL = 0.01;
+const CASES = [
+  { name: 'cube_affine', view: 'cube', persp: false },
+  { name: 'cube_persp', view: 'cube', persp: true },
+  { name: 'floor_affine', view: 'floor', persp: false },
+  { name: 'walls_affine', view: 'walls', persp: false },
+  { name: 'car_gouraud', view: 'car', persp: false },
+  { name: 'sprites_cutout', view: 'sprites', persp: false },
+  { name: 'fog', view: 'fog', persp: false },
+  { name: 'track_start', track: (t) => [t.startS - 12, 2], persp: false },
+  { name: 'track_kerbs', track: (t) => [360, 3], persp: false },
+  { name: 'track_tunnel', track: (t) => [t.tunnels[0].from - 45, 0], persp: false },
+  { name: 'track_inside', track: (t) => [t.tunnels[0].from + 80, -2], persp: false },
+  { name: 'track_bridge', free: (t) => side(t, (t.bridges[0].from + t.bridges[0].to) / 2, 70, 12), persp: false },
+  { name: 'track_overview', free: (t) => side(t, 1350, 110, 45), persp: false },
+  { name: 'car_chase', drive: 2, persp: false },
+  { name: 'car_cockpit_mirror', drive: 0, persp: false },
+  { name: 'race_grid', grid: true },
+  // Stage 6: race tracks with the full grid of different cars and liveries.
+  { name: 'grid_harbour_night', grid: { track: 'harbour', time: 'night' } },
+  { name: 'grid_coast_sprint', grid: { track: 'coast', time: 'dusk' } },
+  // Stage 9: split screen (two viewports, reduced detail).
+  { name: 'split_grid', grid: { track: 'raceway', split: true } },
+  { name: 'night_chase', place: { zone: 'raceway', time: 'night', s: 60, cam: 2 } },
+  { name: 'night_tunnel_headlights', place: { zone: 'raceway', time: 'night', s: 900, cam: 2 } },
+  { name: 'dusk_chase', place: { zone: 'raceway', time: 'dusk', s: 60, cam: 2 } },
+  { name: 'zone_city_night', place: { zone: 'coastCity', time: 'night', s: 600, cam: 2 } },
+  { name: 'zone_city', place: { zone: 'coastCity', time: 'day', s: 400, cam: 2 } },
+  { name: 'zone_mountains', place: { zone: 'mountains', time: 'day', s: 1500, cam: 2 } },
+  { name: 'zone_desert', place: { zone: 'desert', time: 'day', s: 2200, cam: 2 } },
+  { name: 'zone_forest', place: { zone: 'forest', time: 'day', s: 1300, cam: 1 } },
+  // Stage 8: weather (overcast sky, wet road, spray sprites, rain colormap; fog).
+  { name: 'rain_chase', place: { zone: 'raceway', time: 'day', weather: 'rain', s: 60, cam: 2, speed: 30 } },
+  { name: 'fog_mountains', place: { zone: 'mountains', time: 'day', weather: 'fog', s: 1500, cam: 2 } },
+  { name: 'sky_up', free: (t) => { const v = side(t, 100, 0, 3); v[2] = 0.7; return v; }, persp: false },
+];
+
+// Free camera placed beside the track at distance s, looking back at the centreline.
+function side(track, s, off, h) {
+  const i = Math.round(s / track.ds) % track.count, k = i * 3;
+  const p = [track.pos[k] + track.right[k] * off, track.pos[k + 1] + h, track.pos[k + 2] + track.right[k + 2] * off];
+  const dx = track.pos[k] - p[0], dz = track.pos[k + 2] - p[2], dy = track.pos[k + 1] - p[1];
+  return [p, Math.atan2(dx, -dz), Math.atan2(dy, Math.hypot(dx, dz))];
+}
+
+const results = document.getElementById('results');
+const row = (cells, cls = '') => {
+  const tr = results.insertRow();
+  tr.className = cls;
+  for (const c of cells) tr.insertCell().textContent = c;
+};
+
+// Fetches a golden buffer, retrying once (headless runs occasionally drop a request).
+async function loadGolden(name) {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const buf = await fetch(`../tools/golden/${name}.bin`, { cache: 'no-store' }).then((r) => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+    if (buf) return buf;
+  }
+  return null;
+}
+
+async function run() {
+  const goldens = new Map(await Promise.all(CASES.map(async (c) => [c.name, await loadGolden(c.name)])));
+  const pal = buildPalette();
+  const cm = getColormap('day-clear', pal, CONFIG.fog.color, CONFIG.colormap.lightOne);
+  const lib = generateLibrary(1995);
+  const clearIndex = nearestIndex(pal, ...CONFIG.fog.color);
+  const makeRenderer = () => {
+    const gl = createContext(document.createElement('canvas'));
+    if (!gl) throw new Error('WebGL2 unavailable');
+    const r = new Renderer(gl, W, H);
+    r.setPalette(pal);
+    r.setColormap(cm);
+    r.setTextures(buildLayerData(lib, pal, false), lib.length * 2);
+    return r;
+  };
+  const renderer = makeRenderer(), trackRenderer = makeRenderer();
+  const scene = createRenderScene(renderer, assignLayers(lib), { stressCars: 20 });
+  trackRenderer.setSky(generateSky('day', 1995, clearIndex));
+  const trackScene = createTrackScene(trackRenderer, assignLayers(lib), TRACK_TEST_LOOP);
+  const env = createEnv(), trackEnv = createEnv({ sky: true });
+  // Driving scene advanced deterministically: 2 s full throttle, then a little right steer.
+  const driveRenderer = makeRenderer();
+  driveRenderer.setSky(generateSky('day', 1995, clearIndex));
+  const held = new Set(['ArrowUp']);
+  const kb = { held: (c) => held.has(c), hit: () => false, endFrame() {} };
+  const driveScene = createDriveScene(driveRenderer, assignLayers(lib), lib, TRACK_TEST_LOOP, 0, kb);
+  for (let i = 0; i < 140; i++) { if (i === 120) held.add('ArrowRight'); driveScene.update(1 / 60, kb); }
+  // Full grid with 7 rivals, 2 s into the countdown, chase camera (HUD excluded: index buffer only).
+  const raceGrid = (g) => {
+    const time = g.time || 'day', tod = CONFIG.times[time], ci = nearestIndex(pal, ...tod.fog);
+    const gl = createContext(document.createElement('canvas')), pr = new Renderer(gl, W, H);
+    pr.setPalette(pal); pr.setColormap(g.time ? getColormap(time, pal, tod.fog, CONFIG.colormap.lightOne) : cm);
+    pr.setTextures(buildLayerData(lib, pal, false), lib.length * 2);
+    pr.setSky(generateSky(tod.sky, 1995, g.time ? ci : clearIndex));
+    const still = { held: () => false, hit: () => false };
+    const def = g.track ? TRACKS.find((t) => t.id === g.track) : TRACK_TEST_LOOP;
+    const sc = createRaceScene(pr, assignLayers(lib), lib, def, 0, still, { time, split: !!g.split, car2: 3 });
+    sc.cams.mode = 2;
+    for (let i = 0; i < 120; i++) sc.update(1 / 60, still);
+    const pe = createEnv({ sky: true, time: g.time });
+    return { r: pr, sc, e: pe, ci: g.time ? ci : clearIndex };
+  };
+  // Car placed on the track in a given zone and time of day (one renderer per combination).
+  const placed = (p) => {
+    const wc = weatherConditions(p.time, p.weather || 'clear'), gl = createContext(document.createElement('canvas'));
+    const pr = new Renderer(gl, W, H), ci = nearestIndex(pal, ...wc.fog);
+    pr.setPalette(pal);
+    pr.setColormap(getColormap(p.weather ? `${p.time}-${p.weather}` : p.time, pal, wc.fog, CONFIG.colormap.lightOne));
+    pr.setTextures(buildLayerData(lib, pal, false), lib.length * 2);
+    pr.setSky(generateSky(wc.sky, 1995, ci));
+    const still = { held: () => false, hit: () => false };
+    const sc = createDriveScene(pr, assignLayers(lib), lib, TRACK_TEST_LOOP, 0, still, { zone: p.zone, time: p.time, weather: p.weather });
+    const f = { pos: [0, 0, 0], fwd: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
+    frameAt(sc.track, p.s, f);
+    sc.car.reset(f.pos[0], f.pos[1], f.pos[2], Math.atan2(f.fwd[0], -f.fwd[2]));
+    if (p.speed) { const l = Math.hypot(f.fwd[0], f.fwd[2]); sc.car.vx = (f.fwd[0] / l) * p.speed; sc.car.vz = (f.fwd[2] / l) * p.speed; }
+    sc.cams.mode = p.cam;
+    for (let i = 0; i < 30; i++) sc.update(1 / 60, still);
+    const pe = createEnv({ sky: true, time: p.time, weather: p.weather });
+    pe.time = 1;
+    return { r: pr, sc, e: pe, ci };
+  };
+  const dump = new URLSearchParams(location.search).get('dump') === '1';
+  const dumpLines = [];
+  let allPass = true;
+  row(['case', 'result', 'diff px', 'histogram', 'index 0', 'note']);
+  for (const c of CASES) {
+    let r = renderer, sc = scene, e = env, ci = clearIndex;
+    if (c.place) {
+      ({ r, sc, e, ci } = placed(c.place));
+    } else if (c.grid) {
+      ({ r, sc, e, ci } = raceGrid(c.grid === true ? {} : c.grid));
+    } else if (c.view) {
+      scene.setView(c.view);
+      scene.time = 0;
+    } else if (c.drive !== undefined) {
+      r = driveRenderer; sc = driveScene; e = trackEnv;
+      driveScene.cams.mode = c.drive;
+    } else {
+      r = trackRenderer; sc = trackScene; e = trackEnv;
+      if (c.track) trackScene.setDistance(...c.track(trackScene.track));
+      else trackScene.setView(...c.free(trackScene.track));
+    }
+    sc.prepare(e);
+    r.perspective = !!c.persp;
+    r.beginFrame();
+    if (sc.views) for (const v of sc.views) r.renderWorld(v.camera, sc.items, ci, v.env, v.vp);
+    else r.renderWorld(sc.camera, sc.items, ci, e);
+    if (sc.renderExtra) sc.renderExtra(r, ci);
+    const idx = r.readIndexBuffer();
+    if (c.place || c.grid) r.gl.getExtension('WEBGL_lose_context')?.loseContext();
+    show(c.name, idx, pal);
+    if (dump) dumpLines.push(`${c.name}:${toBase64(idx)}`);
+    const zeros = idx.reduce((n, v) => n + (v === 0 ? 1 : 0), 0);
+    const golden = goldens.get(c.name);
+    if (!golden || golden.byteLength !== idx.length) {
+      allPass = false;
+      row([c.name, 'NO GOLDEN', '-', '-', String(zeros), 'run tools/render-test.mjs --update'], 'fail');
+      continue;
+    }
+    const g = new Uint8Array(golden);
+    let diff = 0;
+    const hA = new Int32Array(256), hB = new Int32Array(256);
+    for (let i = 0; i < idx.length; i++) { if (idx[i] !== g[i]) diff++; hA[idx[i]]++; hB[g[i]]++; }
+    let hist = 0;
+    for (let i = 0; i < 256; i++) hist += Math.abs(hA[i] - hB[i]);
+    const dp = diff / idx.length, hp = hist / (2 * idx.length);
+    const pass = dp <= TOL && hp <= TOL && zeros === 0;
+    allPass &&= pass;
+    row([c.name, pass ? 'PASS' : 'FAIL', `${(dp * 100).toFixed(3)}%`, `${(hp * 100).toFixed(3)}%`, String(zeros), ''], pass ? 'pass' : 'fail');
+  }
+  document.getElementById('dump').textContent = dumpLines.join('\n');
+  document.title = allPass ? 'PASS' : 'FAIL';
+  document.body.dataset.result = allPass ? 'PASS' : 'FAIL';
+}
+
+function show(name, idx, pal) {
+  const cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(W, H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const v = idx[(H - 1 - y) * W + x], o = (y * W + x) * 4;
+      img.data[o] = v ? pal[v * 4] : 255; img.data[o + 1] = v ? pal[v * 4 + 1] : 0; img.data[o + 2] = v ? pal[v * 4 + 2] : 255; img.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const fig = document.createElement('figure');
+  fig.append(cv, Object.assign(document.createElement('figcaption'), { textContent: name }));
+  document.getElementById('shots').append(fig);
+}
+
+function toBase64(bytes) {
+  let s = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+
+run().catch((e) => {
+  row(['ERROR', e.message], 'fail');
+  document.title = 'FAIL';
+  document.body.dataset.result = 'FAIL';
+});
+</script>
+</body>
+</html>

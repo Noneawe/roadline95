@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<title>ROADLINE '95</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; image-rendering: pixelated; touch-action: none; user-select: none; -webkit-user-select: none; }
+  #err { position: fixed; inset: 0; margin: 0; padding: 2em; display: none; overflow: auto;
+         background: #000; color: #ccc; font: 14px monospace; white-space: pre-wrap; }
+</style>
+</head>
+<body>
+<canvas id="screen"></canvas>
+<pre id="err"></pre>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

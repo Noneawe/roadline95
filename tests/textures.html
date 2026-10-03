@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>ROADLINE '95 textures</title>
+<style>
+  body { background: #222; color: #ddd; font: 12px monospace; margin: 12px; }
+  .tex { display: inline-block; margin: 6px; vertical-align: top; background: #111; padding: 4px; }
+  canvas { image-rendering: pixelated; display: block; margin-top: 2px; }
+  .row { display: flex; gap: 4px; align-items: flex-start; }
+  h2 { margin: 16px 0 4px; }
+</style>
+</head>
+<body>
+<h1>Texture library</h1>
+<p>Each entry: 64x64 at 2x, LOD 32x32 at 4x, 3x3 tiling at 1x. Seed: <span id="seed"></span>
+(<code>?seed=1234</code>). Magenta = transparent (index 0).</p>
+<div id="lib"></div>
+<h2>Sky panoramas (512x128, shown twice to check horizontal wrap)</h2>
+<div id="sky"></div>
+<script type="module">
+import { CONFIG } from '../src/config.js';
+import { buildPalette, nearestIndex } from '../src/gfx/palette.js';
+import { generateLibrary } from '../src/texgen/library.js';
+import { generateSky, SKY_KINDS, SKY_W, SKY_H } from '../src/texgen/sky.js';
+
+const seed = Number(new URLSearchParams(location.search).get('seed') ?? CONFIG.seed) >>> 0;
+document.getElementById('seed').textContent = seed;
+const pal = buildPalette();
+
+function canvas(w, h, scale, pixel) {
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  cv.style.width = `${w * scale}px`; cv.style.height = `${h * scale}px`;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(w, h);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const v = pixel(x, y), o = (y * w + x) * 4;
+      if (v === 0) { img.data[o] = 255; img.data[o + 1] = 0; img.data[o + 2] = 255; } else {
+        img.data[o] = pal[v * 4]; img.data[o + 1] = pal[v * 4 + 1]; img.data[o + 2] = pal[v * 4 + 2];
+      }
+      img.data[o + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return cv;
+}
+
+const lib = generateLibrary(seed);
+const root = document.getElementById('lib');
+for (const t of lib) {
+  const box = document.createElement('div');
+  box.className = 'tex';
+  const shades = new Set(t.data.filter((v) => v)).size;
+  box.textContent = `${t.name} (${shades} shades${t.cutout ? ', cutout' : ''}${t.tile ? '' : ', sprite'})`;
+  const row = document.createElement('div');
+  row.className = 'row';
+  row.append(
+    canvas(t.size, t.size, 128 / t.size, (x, y) => t.data[y * t.size + x]),
+    canvas(32, 32, 4, (x, y) => t.lod[y * 32 + x]),
+    canvas(192, 192, 1, (x, y) => t.data[(y % t.size) * t.size + (x % t.size)]),
+  );
+  box.append(row);
+  root.append(box);
+}
+
+const fogIdx = nearestIndex(pal, ...CONFIG.fog.color);
+for (const kind of SKY_KINDS) {
+  const sky = generateSky(kind, seed, fogIdx);
+  const box = document.createElement('div');
+  box.className = 'tex';
+  box.textContent = kind;
+  box.append(canvas(SKY_W * 2, SKY_H, 1, (x, y) => sky[y * SKY_W + (x % SKY_W)]));
+  document.getElementById('sky').append(box);
+}
+document.body.dataset.result = 'DONE';
+</script>
+</body>
+</html>

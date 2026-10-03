@@ -1,0 +1,158 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Landing page of the GitHub Pages site in the style of a 1995 home page: description, screenshots,
+     tables of cars and tracks, controls, link to the game (play.html). No scripts, no external assets. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ROADLINE '95 - Official Home Page</title>
+<meta name="description" content="ROADLINE '95: a browser racing game in the style of the mid-1990s racers - SVGA 640x480 in 256 colors, texture mapping, Gouraud shading, tracker music. Pure JavaScript and WebGL2.">
+<style>
+/* 1995: gray textured background, serif text, blue links, bevelled boxes, tables with borders. */
+:root { --face: #c0c0c0; --hi: #ffffff; --lo: #808080; --dark: #000000; --link: #0000ee; --visited: #551a8b; }
+html { background-color: #b8b8b8; background-image: repeating-conic-gradient(#b4b4b4 0% 25%, #bdbdbd 0% 50%); background-size: 4px 4px; }
+body { margin: 0 auto; max-width: 760px; padding: 8px 10px 24px; color: #000; font: 16px/1.35 "Times New Roman", Times, serif; }
+a { color: var(--link); }
+a:visited { color: var(--visited); }
+.center { text-align: center; }
+h1 { margin: 10px 0 0; font: 900 clamp(36px, 9vw, 64px)/1 "Arial Black", Impact, Arial, sans-serif; letter-spacing: 2px;
+  color: #ffe000; text-shadow: 3px 3px 0 #c00000, 6px 6px 0 #000; -webkit-text-stroke: 1px #600; }
+.sub { font: bold italic 20px Arial, Helvetica, sans-serif; color: #000080; margin: 8px 0 4px; }
+h2 { font: bold 22px Arial, Helvetica, sans-serif; color: #000080; margin: 22px 0 6px; }
+h2::before { content: "\25BA  "; color: #c00000; }
+hr { border: 0; height: 2px; border-top: 1px solid var(--lo); border-bottom: 1px solid var(--hi); margin: 14px 0; }
+.ticker { overflow: hidden; white-space: nowrap; background: #000; color: #0f0; font: bold 15px "Courier New", Courier, monospace; padding: 3px 0; border: 2px inset var(--face); }
+.ticker span { display: inline-block; padding-left: 100%; animation: scroll 28s linear infinite; }
+@keyframes scroll { to { transform: translateX(-100%); } }
+@media (prefers-reduced-motion: reduce) { .ticker span { animation: none; padding-left: 8px; } .blink { animation: none !important; } }
+.blink { animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { visibility: hidden; } }
+.new { color: #f00; font: bold 13px Arial, sans-serif; }
+.btn { display: inline-block; margin: 14px 0 6px; padding: 10px 28px; background: var(--face); color: #000 !important; text-decoration: none;
+  font: bold 24px Arial, Helvetica, sans-serif; border: 3px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi); box-shadow: inset -2px -2px 0 var(--lo); }
+.btn:active { border-color: var(--dark) var(--hi) var(--hi) var(--dark); box-shadow: inset 2px 2px 0 var(--lo); }
+.box { background: var(--face); border: 2px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi); padding: 8px 12px; margin: 10px 0; }
+.title { background: #000080; color: #fff; font: bold 14px Arial, sans-serif; padding: 2px 6px; margin: -8px -12px 8px; }
+table.grid { border-collapse: separate; border-spacing: 2px; width: 100%; background: var(--face); border: 2px outset var(--face); }
+table.grid td, table.grid th { border: 1px inset var(--face); padding: 3px 6px; vertical-align: top; text-align: left; }
+table.grid th { background: #000080; color: #fff; font: bold 14px Arial, sans-serif; }
+.shots { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.shot { background: var(--face); border: 2px solid; border-color: var(--hi) var(--dark) var(--dark) var(--hi); padding: 4px; text-align: center; font: 13px Arial, sans-serif; }
+.shot img { width: 100%; display: block; image-rendering: pixelated; border: 2px inset var(--face); }
+ul.dots { padding-left: 22px; }
+ul.dots li { list-style: square; margin: 3px 0; }
+code { font: 15px "Courier New", Courier, monospace; }
+.small { font-size: 13px; }
+footer { font: 13px Arial, sans-serif; text-align: center; }
+</style>
+</head>
+<body>
+
+<div class="center">
+  <h1>ROADLINE '95</h1>
+  <p class="sub">The 256-Color Grand Tour Racing Experience!</p>
+  <p>SVGA 640&times;480 &bull; texture-mapped 3D &bull; Gouraud shading &bull; tracker music &bull; 2-player split screen</p>
+  <a class="btn" href="play.html">&#9654; PLAY NOW!</a>
+  <p class="small">Runs right in your web browser - no download, no install, no floppies!<br>
+  Needs a browser with <b>WebGL2</b>. Keyboard, gamepad or touch screen.</p>
+</div>
+
+<div class="ticker" role="marquee" aria-label="News"><span>*** NEW! Version 1.0 released *** 5 tracks *** 6 cars *** 7 AI rivals *** championship, time trial and 2-player mode *** TV replays *** rain, fog and night racing *** free software under the GNU AGPL ***</span></div>
+
+<hr>
+
+<h2>What is ROADLINE '95?</h2>
+<p>ROADLINE '95 is a circuit racing game in the spirit of the racers of the mid-1990s - the years when texture-mapped 3D worlds, SVGA graphics and tracker music came to home computers. Every pixel of the 3D world is a number from one 256-color palette. Textures are point-sampled and <i>affine-mapped</i>, so they "swim" a little on big surfaces close to the camera, just like they did back then. Light, fog and headlights go through a <i>colormap</i> - a lookup table from color to color - exactly like the software engines of the time.</p>
+<p>Under the hood it is modern: pure JavaScript and WebGL2, no libraries, and not a single image or sound file. Every texture, car, track, sample and song is generated by code when the game starts. The whole game fits in <b>one HTML file of about 530&nbsp;KB</b>.</p>
+
+<div class="box">
+  <div class="title">SYSTEM REQUIREMENTS</div>
+  <ul class="dots">
+    <li>Any computer, tablet or phone with a WebGL2-capable web browser</li>
+    <li>640&times;480 display or better (320&times;240 low-detail mode included)</li>
+    <li>Keyboard, gamepad or touch screen</li>
+    <li>Speakers recommended - sound starts after the first key press or touch</li>
+  </ul>
+</div>
+
+<h2>Screenshots</h2>
+<p class="small">Click a picture to see it at full size. All screenshots are 640&times;480, 256 colors.</p>
+<div class="shots">
+  <div class="shot"><a href="screenshots/title.png"><img src="screenshots/title.png" alt="Title screen with the color-cycled logo over a flyover of the raceway"></a>Title screen</div>
+  <div class="shot"><a href="screenshots/harbour-night.png"><img src="screenshots/harbour-night.png" alt="Racing through the harbour city at night"></a>Harbour Lights at night</div>
+  <div class="shot"><a href="screenshots/raceway-cockpit.png"><img src="screenshots/raceway-cockpit.png" alt="Cockpit view with gauges and a rear-view mirror"></a>Cockpit with mirror</div>
+  <div class="shot"><a href="screenshots/rain-cockpit.png"><img src="screenshots/rain-cockpit.png" alt="Rain: wipers, drops and spray"></a>Rain and wipers</div>
+  <div class="shot"><a href="screenshots/mountain-fog.png"><img src="screenshots/mountain-fog.png" alt="Mountain loop in thick fog"></a>Mountain fog</div>
+  <div class="shot"><a href="screenshots/desert-dusk.png"><img src="screenshots/desert-dusk.png" alt="Desert highway at dusk"></a>Desert at dusk</div>
+  <div class="shot"><a href="screenshots/coast-sprint.png"><img src="screenshots/coast-sprint.png" alt="Coastal sprint from the bumper camera"></a>Coastal sprint</div>
+  <div class="shot"><a href="screenshots/mountain-night.png"><img src="screenshots/mountain-night.png" alt="Night race with headlights"></a>Night and headlights</div>
+  <div class="shot"><a href="screenshots/split-screen.png"><img src="screenshots/split-screen.png" alt="Two players on a split screen"></a>2-player split screen</div>
+  <div class="shot"><a href="screenshots/replay-heli.png"><img src="screenshots/replay-heli.png" alt="Replay from the helicopter camera"></a>TV replay</div>
+  <div class="shot"><a href="screenshots/showroom.png"><img src="screenshots/showroom.png" alt="Showroom with a car on a turning podium and a spec card"></a>The showroom</div>
+  <div class="shot"><a href="screenshots/standings.png"><img src="screenshots/standings.png" alt="Championship standings table"></a>Championship standings</div>
+</div>
+
+<h2>Features <span class="new blink">NEW!</span></h2>
+<ul class="dots">
+  <li><b>Five tracks</b> with tunnels, bridges and big hills - four circuits and one point-to-point sprint.</li>
+  <li><b>Six fictional sports cars</b>, each with its own engine, gearbox, drive and handling - from a rally hatchback to a V12 grand tourer.</li>
+  <li><b>Seven AI rivals</b> with their own cars and personalities: they overtake, defend, use your slipstream and make mistakes.</li>
+  <li><b>Game modes:</b> single race, 5-round championship (win it to unlock a secret car!), time trial against your own ghost, and 2 players on one screen.</li>
+  <li><b>Day, dusk and night</b> with headlights, lit windows and street lamps. <b>Rain</b> with wipers and spray, and <b>fog</b>.</li>
+  <li><b>TV-style replays</b> of the whole race with trackside cameras, zoom and a helicopter.</li>
+  <li><b>Sound:</b> engines that rev with your car, Doppler effect, tunnel echo, and four original songs played by a built-in tracker - switch songs with the radio key.</li>
+  <li><b>Visual damage:</b> dents, scratches and broken lights.</li>
+  <li><b>Detail options</b> just like in 1995: 320&times;240 or 640&times;480, flat or textured, perspective correction, draw distance, scenery density.</li>
+  <li><b>Records</b> for every track, saved in your browser.</li>
+</ul>
+
+<h2>The Cars</h2>
+<table class="grid">
+  <tr><th>Car</th><th>Drive</th><th>Character</th></tr>
+  <tr><td>Vektor GT2</td><td>RWD</td><td>Wedge coupe, the all-rounder</td></tr>
+  <tr><td>Aurora RS</td><td>RWD, mid-engine</td><td>The fastest, and the hardest to tame (unlock it!)</td></tr>
+  <tr><td>Breeze Turbo</td><td>RWD, turbo</td><td>Light roadster - wait for the boost</td></tr>
+  <tr><td>Kestrel ST</td><td>AWD, turbo</td><td>Sports sedan, the king of the rain</td></tr>
+  <tr><td>Halcyon V12</td><td>RWD</td><td>Heavy grand tourer with huge torque</td></tr>
+  <tr><td>Mistral Rally</td><td>AWD, turbo</td><td>Rally hatchback, quick off the line</td></tr>
+</table>
+
+<h2>The Tracks</h2>
+<table class="grid">
+  <tr><th>Track</th><th>Length</th><th>What to expect</th></tr>
+  <tr><td>Harbour Lights</td><td>3.9 km</td><td>City streets at night, a tunnel under the hill, a bridge over the harbour</td></tr>
+  <tr><td>Greywater Raceway</td><td>4.6 km</td><td>Grandstands, pit lane, a tight hairpin and fast esses</td></tr>
+  <tr><td>Highcrest Loop</td><td>4.2 km</td><td>Mountain switchbacks, two tunnels and a gorge bridge</td></tr>
+  <tr><td>Mirage Highway</td><td>5.8 km</td><td>Flat out across the desert, through a rock tunnel</td></tr>
+  <tr><td>Cliffside Run</td><td>4.3 km sprint</td><td>Along the coast from one town to the next</td></tr>
+</table>
+
+<h2>How to Play</h2>
+<table class="grid">
+  <tr><th>Action</th><th>Player 1</th><th>Player 2</th><th>Gamepad</th></tr>
+  <tr><td>Accelerate / brake</td><td>Up / Down</td><td>W / S</td><td>RT / LT</td></tr>
+  <tr><td>Steer</td><td>Left / Right</td><td>A / D</td><td>Left stick</td></tr>
+  <tr><td>Handbrake</td><td>Space</td><td>Left Shift</td><td>A</td></tr>
+  <tr><td>Gear up / down (manual)</td><td>. / ,</td><td>E / Q</td><td>RB / LB</td></tr>
+  <tr><td>Change camera</td><td>C</td><td>1</td><td>Y</td></tr>
+  <tr><td>Look back</td><td>V</td><td>2</td><td>R3</td></tr>
+  <tr><td>Radio (next song)</td><td>R</td><td>-</td><td>Select</td></tr>
+  <tr><td>Pause menu</td><td>Esc</td><td>Esc</td><td>Start</td></tr>
+</table>
+<p class="small">After the race press <b>Space</b> on the results screen to watch the replay. On phones the on-screen buttons appear after the first touch - turn your phone sideways!</p>
+
+<h2>Download</h2>
+<p>The whole game is one HTML file that also works offline from your hard disk: open <a href="play.html">play.html</a> and save the page (or use the link below). The complete source code is on <a href="https://github.com/Noneawe/roadline95">GitHub</a>.</p>
+<p class="center"><a class="btn" href="play.html" download="roadline95.html">&#128190; DOWNLOAD (530 KB)</a></p>
+
+<hr>
+<footer>
+  <p>ROADLINE '95 is free software under the <a href="https://www.gnu.org/licenses/agpl-3.0.html">GNU Affero General Public License v3.0 or later</a>.<br>
+  All cars, drivers, places, brands and music are fictional and original.</p>
+  <p>Best viewed at 640&times;480 or higher with any WebGL2-capable browser.<br>
+  <a href="https://github.com/Noneawe/roadline95">Source code</a> &bull; <a href="https://github.com/Noneawe/roadline95/blob/main/CHANGELOG.md">What's new</a> &bull; <a href="https://github.com/Noneawe/roadline95/issues">Report a bug</a></p>
+</footer>
+
+</body>
+</html>

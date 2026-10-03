@@ -1,0 +1,43 @@
+// Highcrest Loop (~4.2 km): narrow mountain road climbing in switchbacks, through two tunnels and over a
+// gorge bridge, then plunging back down to the start; walls on the steep sides.
+
+export const TRACK_MOUNTAIN = {
+  id: 'mountain',
+  name: 'Highcrest Loop',
+  type: 'circuit',
+  laps: 2,
+  zone: 'mountains',
+  timeOfDay: ['day', 'dusk'],
+  width: 10,
+  surface: 'asphalt2',
+  pieces: [
+    { len: 374, curve: 0, grade: 0, bank: 0, startLine: true, kerbs: 'both' },
+    { len: 200, curve: 45, grade: 3, bank: 4, kerbs: 'right' },
+    { len: 200, curve: 0, grade: 6, bank: 0, walls: 'right' },
+    { len: 141, curve: -127, grade: 4, bank: -5, kerbs: 'both' },
+    { len: 200, curve: 0, grade: 6, bank: 0, walls: 'left' },
+    { len: 141, curve: 127, grade: 4, bank: 5, kerbs: 'both' },
+    { len: 250, curve: 0, grade: 5, bank: 0, walls: 'right' },
+    { len: 350, curve: 0, grade: 2, bank: 0, tunnel: true },
+    { len: 200, curve: 45, grade: 0, bank: 4, kerbs: 'right' },
+    { len: 260, curve: 0, grade: -1, bank: 0, bridge: true },
+    { len: 250, curve: 0, grade: -6, bank: 0, walls: 'left', surface: 'asphalt1' },
+    { len: 141, curve: 127, grade: -5, bank: 5, kerbs: 'both' },
+    { len: 250, curve: 0, grade: -6, bank: 0, walls: 'right' },
+    { len: 141, curve: -127, grade: -5, bank: -5, kerbs: 'both' },
+    { len: 300, curve: 0, grade: -1, bank: 0, walls: 'left' },
+    { len: 200, curve: 45, grade: -3, bank: 4, kerbs: 'right' },
+    { len: 260, curve: 0, grade: -2, bank: 0, tunnel: true },
+    { len: 153, curve: 0, grade: 0, bank: 0 },
+    { len: 200, curve: 45, grade: 0, bank: 4, kerbs: 'both' },
+  ],
+  closeLoop: true,
+  scenery: [
+    { rule: 'range', from: 40, to: 64, obj: 'grandstand', side: 'left', offset: 15 },
+    { rule: 'every', spacing: 3, from: 750, to: 800, obj: 'tyreStack', side: 'right', offset: 10 },
+    { rule: 'every', spacing: 180, sprite: 'marshal', side: 'right', offset: 10 },
+    { rule: 'every', spacing: 12, from: 0, to: 60, sprite: 'flag', side: 'left', offset: 10.5 },
+  ],
+  racingLine: 'auto',
+  aiHints: [],
+};
